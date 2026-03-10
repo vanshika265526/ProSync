@@ -1,4 +1,4 @@
-# PEP Tool - Project Execution & Planning
+#PROSYNC - Project Execution & Planning
 
 A comprehensive, full-stack project management application designed to streamline execution and planning. Built with the MERN stack (MongoDB, Express, React, Node.js), this tool offers real-time features, secure authentication, and a sleek user interface for efficient team collaboration.
 
