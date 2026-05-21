@@ -130,5 +130,22 @@ cd pep-tool
 
 ---
 
-## 📄 License
-This project is licensed under the ISC License.
+## 🐳 Docker Commands Used
+### Backend Docker
+Build Image
+```bash
+docker build -t backend-app 
+```
+Run Container
+```bash
+docker run -p 5000:5000 backend-app
+```
+### Frontend Docker
+Build Image
+```bash
+docker build -t frontend-app 
+```
+Run Container
+```bash
+docker run -p 3000:80 frontend-app
+```
