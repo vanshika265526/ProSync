@@ -1,0 +1,54 @@
+# Render blueprint for the ProSync API.
+#
+# Render → New → Blueprint → point at this repo and it provisions the service
+# from this file. Only the frontend lives on Vercel; this covers the backend.
+#
+# Secrets are marked `sync: false`, which means Render prompts for them in the
+# dashboard instead of reading them from the repo. Never inline a real value.
+
+services:
+  - type: web
+    name: prosync-api
+    runtime: node
+    plan: free # upgrade to "starter" to stop the 15-minute idle spin-down
+    region: oregon
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+
+    # Render polls this to decide whether a deploy is live. Without it, a
+    # crashed process can still be marked healthy.
+    healthCheckPath: /healthz
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Node 18+ is required by mongoose 9 and the google-auth-library.
+      - key: NODE_VERSION
+        value: 20
+
+      # --- Prompted on first deploy ---
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true # Render generates a strong random value for you
+      - key: CLIENT_URL
+        sync: false # e.g. https://prosync.vercel.app
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+
+      - key: GITHUB_SYNC_INTERVAL_MINUTES
+        value: 3
+      - key: ALLOW_VERCEL_PREVIEWS
+        value: false
