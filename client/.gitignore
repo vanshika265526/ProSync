@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+# Any .env variant — except the committed template.
+.env.*
+!.env.example
