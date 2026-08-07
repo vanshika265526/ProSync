@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const nodemailer = require('nodemailer');
+const { clientUrl } = require('../config/cors');
 
 // @desc    Send invitation email
 // @route   POST /api/invite/send
@@ -23,7 +24,9 @@ const sendInviteEmail = asyncHandler(async (req, res) => {
         },
     });
 
-    const referralLink = `http://localhost:5173/signup?ref=${req.user._id}`;
+    // Must point at the frontend, not the API host — CLIENT_URL is the
+    // deployed app's origin (see config/cors.js).
+    const referralLink = `${clientUrl()}/signup?ref=${req.user._id}`;
 
     const mailOptions = {
         from: `ProSync Team <${process.env.SMTP_USER}>`,

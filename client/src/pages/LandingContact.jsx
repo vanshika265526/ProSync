@@ -4,6 +4,7 @@ import { FiMail, FiPhone, FiMapPin, FiSend, FiCheckCircle, FiChevronDown, FiZap,
 import { motion } from "framer-motion";
 import ThemeToggle from "../components/ThemeToggle";
 import axios from "axios";
+import { API_BASE } from "../services/apiClient";
 
 const LandingContact = () => {
     const navigate = useNavigate();
@@ -21,7 +22,7 @@ const LandingContact = () => {
         e.preventDefault();
         setStatus('sending');
         try {
-            await axios.post('http://localhost:5001/api/support/message', formData);
+            await axios.post(`${API_BASE}/support/message`, formData);
             setStatus('sent');
         } catch (err) {
             console.error(err);

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { useDashboard } from '../context/DashboardContext';
 import axios from 'axios';
+import { API_BASE } from '../services/apiClient';
 
 const Support = () => {
     const navigate = useNavigate();
@@ -29,7 +30,7 @@ const Support = () => {
         setError('');
 
         try {
-            await axios.post('http://localhost:5001/api/support/message', formData);
+            await axios.post(`${API_BASE}/support/message`, formData);
             setStatus('sent');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to send message');

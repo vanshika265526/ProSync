@@ -72,11 +72,9 @@ const init = (httpServer) => {
     }
 
     io = new Server(httpServer, {
-        cors: {
-            origin: process.env.CLIENT_URL || true,
-            methods: ['GET', 'POST'],
-            credentials: true,
-        },
+        // Same allowlist Express uses, so a origin that can call the REST API
+        // can also open a socket — and one that can't, can't do either.
+        cors: require('../config/cors').socketCorsOptions,
         // Long-poll first keeps this working behind proxies that block upgrades;
         // clients upgrade to a real WebSocket once the handshake succeeds.
         transports: ['polling', 'websocket'],
