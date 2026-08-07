@@ -3,7 +3,41 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import projectService from '../services/projectService';
 import taskService from '../services/taskService';
 import noteService from '../services/noteService';
+import authService from '../services/authService';
 const DashboardContext = createContext();
+
+// Only two roles exist in the product.
+export const ROLE_ADMIN = 'Admin';
+export const ROLE_COLLABORATOR = 'Collaborator';
+
+// Any legacy value (Owner/Member/Contributor/Viewer) collapses to Collaborator.
+const normalizeRole = (role) => (role === ROLE_ADMIN || role === 'Owner' ? ROLE_ADMIN : ROLE_COLLABORATOR);
+
+const avatarFor = (name) =>
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=7D00FF&color=fff`;
+
+const formatJoined = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+};
+
+// Build the shared userProfile shape from a stored/fetched user object.
+const buildProfile = (user, extra = {}) => ({
+    id: user._id,
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    title: user.title || '',
+    bio: user.bio || '',
+    location: user.location || '',
+    skills: Array.isArray(user.skills) ? user.skills : [],
+    avatar: user.avatar || avatarFor(user.name),
+    joinedDate: formatJoined(user.joinedDate || user.createdAt),
+    onboardingComplete: user.onboardingComplete,
+    ...extra,
+});
 
 const DEMO_DATA = {
     user: {
@@ -19,8 +53,8 @@ const DEMO_DATA = {
             description: 'A futuristic city management application prototype.',
             status: 'In Progress',
             team: [
-                { id: 'demo_user_123', name: 'Guest Explorer', role: 'Owner', avatar: 'https://ui-avatars.com/api/?name=Guest+Explorer&background=7D00FF&color=fff' },
-                { id: 'user_2', name: 'Elena Fisher', role: 'Member', avatar: 'https://i.pravatar.cc/150?img=32' }
+                { id: 'demo_user_123', name: 'Guest Explorer', email: 'demo@prosync.io', role: 'Admin', avatar: 'https://ui-avatars.com/api/?name=Guest+Explorer&background=7D00FF&color=fff' },
+                { id: 'user_2', name: 'Elena Fisher', email: 'elena@prosync.io', role: 'Collaborator', avatar: 'https://i.pravatar.cc/150?img=32' }
             ]
         }
     ],
@@ -99,28 +133,14 @@ export const DashboardProvider = ({ children }) => {
     const [activeProjectId, setActiveProjectId] = useState(null);
     const [userProfile, setUserProfile] = useState(() => {
         const saved = localStorage.getItem('user');
-        if (saved) {
-            const user = JSON.parse(saved);
-            return {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: 'Member',
-                avatar: `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=7D00FF&color=fff`,
-                joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            };
-        }
+        if (saved) return buildProfile(JSON.parse(saved));
 
         const isDemo = localStorage.getItem('isDemoMode') === 'true';
         if (isDemo) {
-            return {
-                id: DEMO_DATA.user._id,
-                name: DEMO_DATA.user.name,
-                email: DEMO_DATA.user.email,
-                role: 'Demo User',
-                avatar: `https://ui-avatars.com/api/?name=Guest+Explorer&background=7D00FF&color=fff`,
-                joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            };
+            return buildProfile(DEMO_DATA.user, {
+                title: 'Demo User',
+                avatar: avatarFor('Guest Explorer'),
+            });
         }
 
         return null;
@@ -167,23 +187,17 @@ export const DashboardProvider = ({ children }) => {
             const fetchedNotes = await noteService.getNotes(user.token);
             setNotes(fetchedNotes);
 
-            // Sync user profile with role derived from active project
-            let role = 'Admin'; // Default
-            if (fetchedProjects.length > 0 && currentActiveId) {
-                const activeProject = fetchedProjects.find(p => p._id === currentActiveId);
-                const userInTeam = activeProject?.team?.find(m => m.email === user.email);
-                role = activeProject?.user === user._id || userInTeam?.role === 'Admin' ? 'Admin' : 'Member';
+            // Pull the authoritative profile (bio, skills, avatar, real join date)
+            // from the server rather than rebuilding it from localStorage.
+            let freshUser = user;
+            try {
+                freshUser = { ...user, ...(await authService.getMe(user.token)) };
+                localStorage.setItem('user', JSON.stringify({ ...freshUser, token: user.token }));
+            } catch (profileError) {
+                console.error('Error fetching profile:', profileError);
             }
 
-            setUserProfile({
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: role,
-                avatar: `https://ui-avatars.com/api/?name=${user.name}&background=7D00FF&color=fff`,
-                joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-                onboardingComplete: user.onboardingComplete
-            });
+            setUserProfile(buildProfile(freshUser));
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
@@ -289,15 +303,7 @@ export const DashboardProvider = ({ children }) => {
         setIsDemoMode(false);
         localStorage.setItem('user', JSON.stringify(userData));
         setCurrentUser(userData);
-        setUserProfile({
-            id: userData._id,
-            name: userData.name,
-            email: userData.email,
-            role: 'Member',
-            avatar: `https://ui-avatars.com/api/?name=${userData.name}&background=7D00FF&color=fff`,
-            joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            onboardingComplete: userData.onboardingComplete
-        });
+        setUserProfile(buildProfile(userData));
     }, []);
 
     const logout = useCallback(() => {
@@ -311,22 +317,79 @@ export const DashboardProvider = ({ children }) => {
         localStorage.setItem('isDemoMode', 'true');
         setIsDemoMode(true);
         setCurrentUser(DEMO_DATA.user);
-        setUserProfile({
-            id: DEMO_DATA.user._id,
-            name: DEMO_DATA.user.name,
-            email: DEMO_DATA.user.email,
-            role: 'Demo User',
-            avatar: `https://ui-avatars.com/api/?name=Guest+Explorer&background=7D00FF&color=fff`,
-            joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        });
+        setUserProfile(buildProfile(DEMO_DATA.user, {
+            title: 'Demo User',
+            avatar: avatarFor('Guest Explorer'),
+        }));
     }, []);
+
+    // Fold a server-returned task/project document into local state without
+    // firing another write. Used by the GitHub module after it mutates a doc.
+    const applyTaskUpdate = useCallback((updatedTask) => {
+        if (!updatedTask?._id) return;
+        setTasks(prev => prev.map(t => (t._id === updatedTask._id ? { ...t, ...updatedTask } : t)));
+    }, []);
+
+    const applyProjectUpdate = useCallback((projectId, patch) => {
+        if (!projectId || !patch) return;
+        setProjects(prev => prev.map(p => (p._id === projectId ? { ...p, ...patch } : p)));
+    }, []);
+
+    // --- Profile ---
+
+    // Persist the logged-in user's own profile edits.
+    const updateUserProfile = useCallback(async (updates) => {
+        if (!currentUser) return null;
+
+        if (isDemoMode) {
+            const merged = { ...userProfile, ...updates };
+            setUserProfile(merged);
+            return merged;
+        }
+
+        if (!currentUser.token) return null;
+
+        const saved = await authService.updateProfile(updates, currentUser.token);
+        const merged = { ...currentUser, ...saved, token: currentUser.token };
+
+        localStorage.setItem('user', JSON.stringify(merged));
+        setCurrentUser(merged);
+        setUserProfile(buildProfile(merged));
+
+        // Reflect the new name/avatar in any project team lists already in memory
+        setProjects(prev => prev.map(p => ({
+            ...p,
+            team: (p.team || []).map(m =>
+                m.email === saved.email ? { ...m, name: saved.name, avatar: saved.avatar } : m
+            ),
+        })));
+
+        return buildProfile(merged);
+    }, [currentUser, isDemoMode, userProfile]);
+
+    // Fetch ANY user's profile (own or someone else's) by id or email.
+    const fetchUserProfile = useCallback(async (identifier) => {
+        if (!identifier) return null;
+
+        if (isDemoMode) {
+            if (identifier === userProfile?.id || identifier === userProfile?.email) return userProfile;
+            const member = DEMO_DATA.projects
+                .flatMap(p => p.team || [])
+                .find(m => m.id === identifier || m.email === identifier);
+            return member ? buildProfile({ _id: member.id, ...member }) : null;
+        }
+
+        if (!currentUser?.token) return null;
+        const data = await authService.getUserProfile(identifier, currentUser.token);
+        return buildProfile(data, { pendingInvite: !!data.pendingInvite });
+    }, [currentUser, isDemoMode, userProfile]);
 
     // Project CRUD
     const addProject = useCallback(async (project) => {
         if (!currentUser) return;
 
         if (isDemoMode) {
-            const newProject = { ...project, _id: `demo_p_${Date.now()}`, team: [{ ...userProfile, role: 'Owner' }] };
+            const newProject = { ...project, _id: `demo_p_${Date.now()}`, user: currentUser._id, team: [{ ...userProfile, role: ROLE_ADMIN }] };
             setProjects(prev => [...prev, newProject]);
             setActiveProjectId(newProject._id);
             return;
@@ -334,17 +397,19 @@ export const DashboardProvider = ({ children }) => {
 
         if (!currentUser.token) return;
         try {
-            const projectTeam = project.team || [];
-            // Ensure owner is in the team as Admin
-            if (!projectTeam.some(m => m.email === currentUser.email)) {
-                projectTeam.push({
-                    id: currentUser._id,
-                    name: currentUser.name,
-                    email: currentUser.email,
-                    role: 'Admin',
-                    avatar: `https://ui-avatars.com/api/?name=${currentUser.name}&background=7D00FF&color=fff`
-                });
-            }
+            // The creator is the Admin; everyone else starts as a Collaborator.
+            // The server re-derives this anyway, this just keeps the optimistic UI honest.
+            const projectTeam = (project.team || [])
+                .filter(m => m.email && m.email !== currentUser.email)
+                .map(m => ({ ...m, role: ROLE_COLLABORATOR }));
+
+            projectTeam.unshift({
+                id: currentUser._id,
+                name: currentUser.name,
+                email: currentUser.email,
+                role: ROLE_ADMIN,
+                avatar: userProfile?.avatar || avatarFor(currentUser.name)
+            });
 
             const newProject = await projectService.createProject({
                 ...project,
@@ -508,12 +573,17 @@ export const DashboardProvider = ({ children }) => {
 
         if (!currentUser.token) return;
         try {
-            const newNote = await noteService.createNote(note, currentUser.token);
+            // Tagging the note with the active project lets note edits appear
+            // on that project's history timeline. Notes stay user-scoped.
+            const newNote = await noteService.createNote(
+                { ...note, projectId: note.projectId || activeProjectId || undefined },
+                currentUser.token
+            );
             setNotes(prev => [newNote, ...prev]);
         } catch (error) {
             console.error('Error adding note:', error.response?.data || error.message);
         }
-    }, [currentUser, isDemoMode]);
+    }, [currentUser, isDemoMode, activeProjectId]);
 
     const updateNote = useCallback(async (id, updates) => {
         if (!currentUser) return;
@@ -696,6 +766,14 @@ export const DashboardProvider = ({ children }) => {
         setShowGreeting,
         userProfile,
         setUserProfile,
+        updateUserProfile,
+        fetchUserProfile,
+        // Exposed for the GitHub integration, which talks to its own API and
+        // then folds the resulting documents back into dashboard state.
+        currentUser,
+        authToken: currentUser?.token,
+        applyTaskUpdate,
+        applyProjectUpdate,
         isSidebarCollapsed,
         setIsSidebarCollapsed,
         theme,
@@ -703,12 +781,13 @@ export const DashboardProvider = ({ children }) => {
         login,
         logout,
         joinProject,
+        // 'Admin' if the user created the active project, otherwise 'Collaborator'.
         currentUserRole: useMemo(() => {
             const activeProject = projects.find(p => p._id === activeProjectId);
-            if (!activeProject) return 'Member';
-            if (activeProject.user === currentUser?._id) return 'Owner';
+            if (!activeProject) return ROLE_COLLABORATOR;
+            if (activeProject.user === currentUser?._id) return ROLE_ADMIN;
             const member = activeProject.team?.find(m => m.email === currentUser?.email);
-            return member?.role || 'Member';
+            return normalizeRole(member?.role);
         }, [projects, activeProjectId, currentUser])
     };
 

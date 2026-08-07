@@ -35,11 +35,37 @@ const googleLogin = async (credential, accessToken) => {
     return response.data;
 };
 
+const authConfig = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
+
+// Get the logged-in user's own full profile
+const getMe = async (token) => {
+    const response = await axios.get(`${API_URL}/me`, authConfig(token));
+    return response.data;
+};
+
+// Update the logged-in user's own profile
+const updateProfile = async (profileData, token) => {
+    const response = await axios.put(`${API_URL}/profile`, profileData, authConfig(token));
+    return response.data;
+};
+
+// Get any user's public profile by id or email
+const getUserProfile = async (identifier, token) => {
+    const response = await axios.get(
+        `${API_URL}/users/${encodeURIComponent(identifier)}`,
+        authConfig(token)
+    );
+    return response.data;
+};
+
 const authService = {
     register,
     login,
     logout,
     sendOTP,
     googleLogin,
+    getMe,
+    updateProfile,
+    getUserProfile,
 };
 export default authService;

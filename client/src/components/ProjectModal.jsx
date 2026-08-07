@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { FiX, FiPlus, FiUserPlus, FiTrash2, FiMail } from 'react-icons/fi';
 import { useDashboard } from '../context/DashboardContext';
+import useModalDismiss from '../hooks/useModalDismiss';
 
 const ProjectModal = ({ isOpen, onClose, projectToEdit }) => {
     const { addProject, updateProject, theme, userProfile, currentUserRole } = useDashboard();
-    const isAdmin = !projectToEdit || ['Owner', 'Admin'].includes(currentUserRole);
+    const isAdmin = !projectToEdit || currentUserRole === 'Admin';
     const [memberInput, setMemberInput] = useState('');
     const [project, setProject] = useState(projectToEdit || {
         name: '',
@@ -12,7 +13,8 @@ const ProjectModal = ({ isOpen, onClose, projectToEdit }) => {
         deadline: new Date().toISOString().split('T')[0],
         type: 'Private Board',
         description: '',
-        team: [{ ...userProfile, _id: userProfile?.id, id: 'me', role: 'Owner', isOwner: true }], // Include user by default
+        // The creator is always the Admin of the project they create.
+        team: [{ ...userProfile, _id: userProfile?.id, id: userProfile?.id, role: 'Admin', isCreator: true }],
         tasks: []
     });
 
@@ -29,8 +31,8 @@ const ProjectModal = ({ isOpen, onClose, projectToEdit }) => {
             id: Date.now(),
             name: memberInput.split('@')[0],
             email: memberInput,
-            role: 'Contributor',
-            avatar: `https://i.pravatar.cc/150?u=${memberInput}`
+            role: 'Collaborator',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(memberInput.split('@')[0])}&background=random`
         };
         setProject({
             ...project,
@@ -79,6 +81,9 @@ const ProjectModal = ({ isOpen, onClose, projectToEdit }) => {
         setProject({ ...project, tasks: newTasks });
     };
 
+    // Click the backdrop or press Escape to dismiss.
+    const { backdropProps } = useModalDismiss(isOpen, onClose);
+
     if (!isOpen) return null;
 
     const handleSubmit = (e) => {
@@ -92,7 +97,11 @@ const ProjectModal = ({ isOpen, onClose, projectToEdit }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div
+            {...backdropProps}
+            role="presentation"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+        >
             <div className={`${theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'} w-full max-w-lg rounded-3xl p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300 overflow-hidden max-h-[90vh] overflow-y-auto custom-scrollbar`}>
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-cyan to-electric-purple"></div>
                 <button onClick={onClose} className="absolute top-6 right-6 text-slate-500 hover:text-rose-500 transition-colors">
@@ -191,7 +200,7 @@ const ProjectModal = ({ isOpen, onClose, projectToEdit }) => {
                                         <div className="flex flex-col">
                                             <span className={`text-[9px] font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-700'}`}>{m.name}</span>
                                         </div>
-                                        {m._id !== userProfile?.id && m.id !== 'me' && !m.isOwner && (
+                                        {m._id !== userProfile?.id && m.id !== 'me' && !m.isCreator && (
                                             <button
                                                 type="button"
                                                 onClick={() => removeMember(m.id)}

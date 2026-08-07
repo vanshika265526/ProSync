@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiX, FiPlus, FiTrash2, FiCheckSquare } from 'react-icons/fi';
 import { useDashboard } from '../context/DashboardContext';
+import TaskGithubPanel from './github/TaskGithubPanel';
+import useModalDismiss from '../hooks/useModalDismiss';
 
 const TaskModal = ({ isOpen, onClose, taskToEdit }) => {
     const { addTask, updateTask, activeProjectId, projects, userProfile, currentUserRole } = useDashboard();
     const activeProject = projects.find(p => p._id === activeProjectId);
-    const isAdmin = ['Owner', 'Admin'].includes(currentUserRole);
+    const isAdmin = currentUserRole === 'Admin';
     const [task, setTask] = useState(taskToEdit || {
         title: '',
         priority: 'Medium',
@@ -19,6 +21,28 @@ const TaskModal = ({ isOpen, onClose, taskToEdit }) => {
     });
 
     const [newSubtask, setNewSubtask] = useState('');
+
+    // The modal stays mounted, so useState's initialiser only ever runs once.
+    // Re-seed the form whenever a different task is opened, otherwise the
+    // previous task's values (and GitHub links) stick around.
+    React.useEffect(() => {
+        if (!isOpen) return;
+        setTask(taskToEdit || {
+            title: '',
+            priority: 'Medium',
+            status: 'Todo',
+            date: new Date().toLocaleDateString(),
+            deadline: new Date().toISOString().split('T')[0],
+            today: new Date().toISOString().split('T')[0],
+            members: ['me'],
+            tags: [{ label: 'Important', color: 'purple' }],
+            subtasks: []
+        });
+        setNewSubtask('');
+    }, [isOpen, taskToEdit]);
+
+    // Click the backdrop or press Escape to dismiss.
+    const { backdropProps } = useModalDismiss(isOpen, onClose);
 
     if (!isOpen) return null;
 
@@ -44,8 +68,12 @@ const TaskModal = ({ isOpen, onClose, taskToEdit }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-            <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-3xl p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300">
+        <div
+            {...backdropProps}
+            role="presentation"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+        >
+            <div className="bg-slate-900 border border-white/10 w-full max-w-xl rounded-3xl p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <button onClick={onClose} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
                     <FiX size={24} />
                 </button>
@@ -186,6 +214,15 @@ const TaskModal = ({ isOpen, onClose, taskToEdit }) => {
                             ))}
                         </div>
                     </div>
+
+                    {/* GitHub Smart Integration — only meaningful for saved tasks */}
+                    {taskToEdit?._id && (
+                        <div className="pt-2 border-t border-white/5">
+                            <div className="pt-5">
+                                <TaskGithubPanel task={taskToEdit} />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex gap-4 pt-4">
                         <button

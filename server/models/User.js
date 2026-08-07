@@ -19,6 +19,31 @@ const userSchema = mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        // --- Public profile fields ---
+        avatar: {
+            type: String,
+            default: '',
+        },
+        title: {
+            type: String,
+            default: '',
+        },
+        bio: {
+            type: String,
+            default: '',
+        },
+        location: {
+            type: String,
+            default: '',
+        },
+        skills: {
+            type: [String],
+            default: [],
+        },
+        isGoogleUser: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

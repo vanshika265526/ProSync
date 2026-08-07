@@ -1,14 +1,22 @@
 import React from 'react';
 import { FiX, FiCheck } from 'react-icons/fi';
 import { useDashboard } from '../context/DashboardContext';
+import useModalDismiss from '../hooks/useModalDismiss';
 
 const SettingsModal = ({ isOpen, onClose }) => {
     const { showGreeting, setShowGreeting, theme, toggleTheme } = useDashboard();
 
+    // Click the backdrop or press Escape to dismiss.
+    const { backdropProps } = useModalDismiss(isOpen, onClose);
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div
+            {...backdropProps}
+            role="presentation"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+        >
             <div className={`${theme === 'dark' ? 'bg-slate-900 border-white/10 shadow-purple-glow/20' : 'bg-white border-slate-200 shadow-xl'} border w-full max-w-md rounded-3xl p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300 transition-all`}>
                 <button onClick={onClose} className={`absolute top-6 right-6 ${theme === 'dark' ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-rose-500'} transition-colors`}>
                     <FiX size={24} />

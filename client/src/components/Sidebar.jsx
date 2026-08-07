@@ -48,7 +48,7 @@ const Sidebar = ({ onAddProject, onAddTask, onViewMembers, onViewList }) => {
     };
 
     return (
-        <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} ${theme === 'dark' ? 'bg-slate-950 border-white/5 text-slate-400' : 'bg-white border-slate-200 text-slate-900'} border-r flex flex-col h-screen font-['Outfit'] font-light relative z-50 shadow-2xl transition-[width,background-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]`}>
+        <aside className={`${isSidebarCollapsed ? 'w-[68px]' : 'w-56'} ${theme === 'dark' ? 'bg-slate-950 border-white/5 text-slate-400' : 'bg-white border-slate-200 text-slate-900'} border-r flex flex-col h-screen font-['Outfit'] font-light relative z-50 shadow-2xl transition-[width,background-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]`}>
             {/* Collapse Toggle */}
             <button
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -57,7 +57,7 @@ const Sidebar = ({ onAddProject, onAddTask, onViewMembers, onViewList }) => {
                 {isSidebarCollapsed ? '>' : '<'}
             </button>
             {/* Logo Section */}
-            <div className={`p-6 pb-4 flex items-center ${isSidebarCollapsed ? 'justify-center px-4' : 'gap-3'}`}>
+            <div className={`p-5 pb-4 flex items-center ${isSidebarCollapsed ? 'justify-center px-3' : 'gap-3'}`}>
                 <div className="w-8 h-8 bg-electric-purple rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-purple-glow">
                     <span className="text-lg font-black ">PS</span>
                 </div>
@@ -92,7 +92,7 @@ const Sidebar = ({ onAddProject, onAddTask, onViewMembers, onViewList }) => {
             <div className="flex-1 overflow-y-auto px-3 custom-scrollbar">
                 <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center mb-4' : 'justify-between mb-2 px-4'}`}>
                     {!isSidebarCollapsed && <h4 className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.2em] animate-in fade-in">Projects</h4>}
-                    {['Owner', 'Admin'].includes(currentUserRole) && (
+                    {currentUserRole === 'Admin' && (
                         <button
                             onClick={onAddProject}
                             className="p-1 bg-neon-cyan/10 text-neon-cyan rounded-md hover:bg-neon-cyan hover:text-midnight transition-all flex-shrink-0"
@@ -203,7 +203,7 @@ const Sidebar = ({ onAddProject, onAddTask, onViewMembers, onViewList }) => {
                     )}
                 </div>
 
-                {['Owner', 'Admin'].includes(currentUserRole) && (
+                {currentUserRole === 'Admin' && (
                     <div className={`mt-4 mb-4 ${isSidebarCollapsed ? 'px-1' : 'px-2'}`}>
                         <button
                             onClick={() => setIsInviteOpen(true)}
@@ -234,10 +234,10 @@ const Sidebar = ({ onAddProject, onAddTask, onViewMembers, onViewList }) => {
                         <>
                             <div className="flex-1 min-w-0 animate-in fade-in">
                                 <h4 className={`text-[10px] font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'} truncate`}>
-                                    {JSON.parse(localStorage.getItem('user'))?.name || 'User'}
+                                    {userProfile?.name || 'User'}
                                 </h4>
                                 <p className="text-[8px] text-slate-500 font-medium truncate">
-                                    {userProfile?.role || 'Member'}
+                                    {userProfile?.title || currentUserRole}
                                 </p>
                             </div>
                             <button

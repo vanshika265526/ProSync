@@ -199,9 +199,9 @@ const DashboardDocs = () => {
                                 </div>
                                 <div>
                                     <h4 className="text-pink-500 text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2">
-                                        <FiUsers /> Team Ownership
+                                        <FiUsers /> Team Roles
                                     </h4>
-                                    <p>The creator of a project is the <strong>Owner</strong>. Members added via email are <strong>Contributors</strong> who can manage tasks but cannot delete the project framework.</p>
+                                    <p>The creator of a project is the <strong>Admin</strong>. Everyone who joins through the invite link is a <strong>Collaborator</strong> — they can work on tasks but cannot edit or delete the project itself.</p>
                                 </div>
                             </div>
                         </Section>

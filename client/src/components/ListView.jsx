@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { FiCheckSquare, FiCheck, FiChevronDown, FiChevronRight, FiUsers, FiCalendar, FiTrash2, FiClock } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { useDashboard } from '../context/DashboardContext';
 
 const ListView = ({ onEdit, isMyTasksView = false }) => {
     const { tasks, filteredTasks, toggleSubtask, updateTask, deleteTask, theme, projects, activeProjectId, userProfile, currentUserRole } = useDashboard();
+    const navigate = useNavigate();
 
     const displayTasks = useMemo(() => {
         if (!isMyTasksView) return filteredTasks;
@@ -104,8 +106,8 @@ const ListView = ({ onEdit, isMyTasksView = false }) => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div
-                                                    className={`flex flex-col gap-1 ${['Owner', 'Admin'].includes(currentUserRole) ? 'cursor-pointer' : ''}`}
-                                                    onClick={() => ['Owner', 'Admin'].includes(currentUserRole) && onEdit && onEdit(task)}
+                                                    className={`flex flex-col gap-1 ${currentUserRole === 'Admin' ? 'cursor-pointer' : ''}`}
+                                                    onClick={() => currentUserRole === 'Admin' && onEdit && onEdit(task)}
                                                 >
                                                     <span className={`text-xs font-black transition-colors ${theme === 'dark' ? 'text-white group-hover:text-neon-cyan' : 'text-black group-hover:text-neon-cyan'
                                                         }`}>{task.title}</span>
@@ -148,10 +150,19 @@ const ListView = ({ onEdit, isMyTasksView = false }) => {
                                                             const isMe = memberId === 'me' || memberId === userProfile?.id;
                                                             const member = isMe ? userProfile : activeProject?.team?.find(m => m._id === memberId || m.id === memberId);
                                                             return member ? (
-                                                                <div key={i} className="flex items-center gap-1.5">
-                                                                    <img src={member.avatar} className="w-4 h-4 rounded-md" alt={member.name} title={member.name} />
-                                                                    <span className="text-[9px] font-bold text-slate-400">{isMe ? 'Me' : member.name}</span>
-                                                                </div>
+                                                                <button
+                                                                    key={i}
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        navigate(isMe ? '/profile' : `/profile/${encodeURIComponent(member.email || member.id || member._id)}`);
+                                                                    }}
+                                                                    title={`View ${isMe ? 'your' : `${member.name}'s`} profile`}
+                                                                    className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                                                                >
+                                                                    <img src={member.avatar} className="w-4 h-4 rounded-md" alt={member.name} />
+                                                                    <span className="text-[9px] font-bold text-slate-400 hover:text-neon-cyan transition-colors">{isMe ? 'Me' : member.name}</span>
+                                                                </button>
                                                             ) : (
                                                                 <span key={i} className="text-[10px] font-bold text-slate-600">Unassigned</span>
                                                             );
@@ -184,7 +195,7 @@ const ListView = ({ onEdit, isMyTasksView = false }) => {
                                                             <FiCheckSquare size={16} className="group-hover/done:scale-110 transition-transform" />
                                                         </button>
                                                     )}
-                                                    {['Owner', 'Admin'].includes(currentUserRole) && (
+                                                    {currentUserRole === 'Admin' && (
                                                         <button
                                                             onClick={() => {
                                                                 if (confirm('Delete entire task?')) deleteTask(task._id);

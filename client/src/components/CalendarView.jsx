@@ -150,8 +150,8 @@ const CalendarView = ({ onEdit }) => {
                                         return (
                                             <div
                                                 key={task._id}
-                                                onClick={() => ['Owner', 'Admin'].includes(currentUserRole) && onEdit(task)}
-                                                className={`px-2 py-1.5 rounded-lg text-[9px] font-bold truncate ${['Owner', 'Admin'].includes(currentUserRole) ? 'cursor-pointer' : ''} transition-all border ${isMine
+                                                onClick={() => currentUserRole === 'Admin' && onEdit(task)}
+                                                className={`px-2 py-1.5 rounded-lg text-[9px] font-bold truncate ${currentUserRole === 'Admin' ? 'cursor-pointer' : ''} transition-all border ${isMine
                                                     ? 'bg-electric-purple/20 border-electric-purple/40 text-electric-purple shadow-[0_0_10px_rgba(125,0,255,0.1)] hover:bg-electric-purple/40'
                                                     : task.priority === 'High'
                                                         ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 hover:bg-rose-500/20'

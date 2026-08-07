@@ -1,9 +1,14 @@
 import React, { useMemo } from "react";
-import { FiCalendar, FiMoreHorizontal, FiCheckSquare, FiTrendingUp, FiTrash2 } from "react-icons/fi";
+import { FiCalendar, FiMoreHorizontal, FiCheckSquare, FiTrendingUp, FiTrash2, FiZap } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 import { useDashboard } from "../context/DashboardContext";
+import PullRequestCard from "./github/PullRequestCard";
+import IssueCard from "./github/IssueCard";
+import { SyncStatusBadge } from "./github/githubUi";
 
-const TaskCard = ({ _id: id, title, tags, date, members, subtasks, priority, status, onEdit, ...props }) => {
+const TaskCard = ({ _id: id, title, tags, date, members, subtasks, priority, status, github, onEdit, ...props }) => {
   const { toggleSubtask, deleteTask, updateTask, theme, projects, activeProjectId, userProfile, currentUserRole } = useDashboard();
+  const navigate = useNavigate();
   const activeProject = projects.find(p => p._id === activeProjectId);
   const getTagStyles = (color) => {
     const styles = {
@@ -41,8 +46,8 @@ const TaskCard = ({ _id: id, title, tags, date, members, subtasks, priority, sta
   }, [subtasks, status]);
   return (
     <div
-      onClick={() => ['Owner', 'Admin'].includes(currentUserRole) && onEdit && onEdit()}
-      className={`${theme === 'dark' ? 'bg-slate-900/60 border-white/5 shadow-xl hover:border-neon-cyan/40' : 'bg-white border-slate-200 shadow-md hover:border-neon-cyan/60'} p-3.5 rounded-2xl border transition-all group hover:shadow-[0_10px_30px_rgba(0,242,234,0.05)] ${['Owner', 'Admin'].includes(currentUserRole) ? 'cursor-pointer' : ''} relative overflow-hidden active:scale-95`}
+      onClick={() => currentUserRole === 'Admin' && onEdit && onEdit()}
+      className={`${theme === 'dark' ? 'bg-slate-900/60 border-white/5 shadow-xl hover:border-neon-cyan/40' : 'bg-white border-slate-200 shadow-md hover:border-neon-cyan/60'} p-3.5 rounded-2xl border transition-all group hover:shadow-[0_10px_30px_rgba(0,242,234,0.05)] ${currentUserRole === 'Admin' ? 'cursor-pointer' : ''} relative overflow-hidden active:scale-95`}
     >
       {/* Priority Indicator */}
       <div className={`absolute top-0 left-0 w-1 h-full bg-current ${getPriorityColor(priority)} opacity-50`}></div>
@@ -118,7 +123,7 @@ const TaskCard = ({ _id: id, title, tags, date, members, subtasks, priority, sta
               </button>
             </>
           )}
-          {['Owner', 'Admin'].includes(currentUserRole) && (
+          {currentUserRole === 'Admin' && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -146,6 +151,31 @@ const TaskCard = ({ _id: id, title, tags, date, members, subtasks, priority, sta
           </span>
         ))}
       </div>
+
+      {/* GitHub links + sync indicator (Features 3, 4, 8) */}
+      {(github?.pullRequest?.number || github?.issue?.number || github?.autoCompleted) && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {github.pullRequest?.number && (
+            <PullRequestCard pullRequest={github.pullRequest} compactMode />
+          )}
+          {github.issue?.number && (
+            <IssueCard issue={github.issue} compactMode />
+          )}
+          {github.autoCompleted && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase tracking-tighter"
+              title={github.autoCompletedReason}
+            >
+              <FiZap size={9} /> Auto
+            </span>
+          )}
+          <SyncStatusBadge
+            status={github.syncStatus || 'not_connected'}
+            showLabel={false}
+            title={github.syncError || undefined}
+          />
+        </div>
+      )}
 
       {taskProgress && (
         <div className="mb-3">
@@ -215,9 +245,14 @@ const TaskCard = ({ _id: id, title, tags, date, members, subtasks, priority, sta
             return (
               <img
                 key={i}
-                src={member.avatar || `https://i.pravatar.cc/150?u=${memberId}`}
-                title={member.name}
-                className="w-5 h-5 rounded-lg border-2 border-slate-900 group-hover:border-neon-cyan/50 transition-all hover:z-10 hover:scale-125"
+                src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name || 'User')}&background=random`}
+                title={`View ${isMe ? 'your' : `${member.name}'s`} profile`}
+                onClick={(e) => {
+                  // Don't let the click bubble up into "open task"
+                  e.stopPropagation();
+                  navigate(isMe ? '/profile' : `/profile/${encodeURIComponent(member.email || member.id || member._id)}`);
+                }}
+                className="w-5 h-5 rounded-lg border-2 border-slate-900 group-hover:border-neon-cyan/50 transition-all hover:z-10 hover:scale-125 cursor-pointer"
               />
             );
           })}

@@ -2,12 +2,17 @@ import React, { useState } from 'react';
 import { FiX, FiMail, FiCopy, FiCheck, FiSend, FiShare2 } from 'react-icons/fi';
 import { FaWhatsapp, FaTelegramPlane, FaLinkedinIn } from 'react-icons/fa';
 import axios from 'axios';
+import useModalDismiss from '../hooks/useModalDismiss';
 
 const InviteModal = ({ isOpen, onClose, activeProjectId, projectName }) => {
     const [email, setEmail] = useState('');
     const [copied, setCopied] = useState(false);
     const [status, setStatus] = useState(''); // '', 'sending', 'sent', 'error'
     const [message, setMessage] = useState('');
+
+    // Click the backdrop or press Escape to dismiss.
+    // Must run before the early return so hook order stays stable.
+    const { backdropProps } = useModalDismiss(isOpen, onClose);
 
     if (!isOpen) return null;
 
@@ -64,7 +69,11 @@ const InviteModal = ({ isOpen, onClose, activeProjectId, projectName }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-all duration-500">
+        <div
+            {...backdropProps}
+            role="presentation"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-all duration-500"
+        >
             <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300 overflow-hidden group">
                 {/* Decorative gradients */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-neon-cyan/10 blur-[80px] rounded-full group-hover:bg-neon-cyan/20 transition-all duration-700"></div>

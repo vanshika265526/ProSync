@@ -65,7 +65,7 @@ const Board = ({ onAddTask }) => {
                                     onEdit={() => onAddTask(task)}
                                 />
                             ))}
-                            {['Owner', 'Admin'].includes(currentUserRole) && (
+                            {currentUserRole === 'Admin' && (
                                 <button
                                     onClick={() => onAddTask()}
                                     className={`w-full py-4 flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed ${theme === 'dark' ? 'border-white/5 text-slate-500 hover:border-white/10 hover:text-slate-300 hover:bg-white/[0.02]' : 'border-slate-300 text-slate-500 hover:border-neon-cyan/50 hover:text-neon-cyan bg-white hover:bg-slate-50/50 shadow-sm'} transition-all group/add`}
@@ -80,7 +80,7 @@ const Board = ({ onAddTask }) => {
                     </div>
                 );
             })}
-            {['Owner', 'Admin'].includes(currentUserRole) && (
+            {currentUserRole === 'Admin' && (
                 <div className="flex-shrink-0 w-[280px] flex flex-col pt-2">
                     <button className={`w-full py-4 flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed ${theme === 'dark' ? 'border-white/5 text-slate-500 hover:border-neon-cyan/30 hover:text-neon-cyan hover:bg-neon-cyan/5' : 'border-slate-300 text-slate-600 hover:border-neon-cyan/50 hover:text-neon-cyan hover:bg-white shadow-sm'} transition-all group`}>
                         <FiPlus className="group-hover:rotate-90 transition-transform" />

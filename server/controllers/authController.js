@@ -1,10 +1,41 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
+const Project = require('../models/Project');
 const OTP = require('../models/OTP');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
+const { publicProfile, privateProfile } = require('../utils/userProfile');
+const events = require('../services/eventService');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+/**
+ * Announce a sign-in on every project the user belongs to.
+ *
+ * Feed-only: a login is interesting for five minutes, so it never becomes a
+ * history row and never notifies anyone. Fire-and-forget so a slow write
+ * can't delay the login response.
+ */
+const announceLogin = (user) => {
+    Project.find({ $or: [{ user: user._id }, { 'team.email': user.email }] })
+        .select('_id')
+        .lean()
+        .then((projects) =>
+            Promise.all(
+                projects.map((p) =>
+                    events.recordActivity({
+                        project: p._id,
+                        actor: user,
+                        action: 'user_login',
+                        description: 'Signed in',
+                        category: 'member',
+                    })
+                )
+            )
+        )
+        .catch((error) => console.error('[Auth] login activity failed:', error.message));
+};
 
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -54,10 +85,7 @@ const registerUser = asyncHandler(async (req, res) => {
         await OTP.deleteOne({ _id: otpRecord._id });
 
         res.status(201).json({
-            _id: user.id,
-            name: user.name,
-            email: user.email,
-            onboardingComplete: user.onboardingComplete,
+            ...privateProfile(user),
             token: generateToken(user._id),
             message: 'User registered successfully.'
         });
@@ -76,11 +104,9 @@ const loginUser = asyncHandler(async (req, res) => {
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
+        announceLogin(user);
         res.json({
-            _id: user.id,
-            name: user.name,
-            email: user.email,
-            onboardingComplete: user.onboardingComplete,
+            ...privateProfile(user),
             token: generateToken(user._id),
         });
     } else {
@@ -196,11 +222,10 @@ const googleLogin = asyncHandler(async (req, res) => {
             });
         }
 
+        announceLogin(user);
+
         res.status(200).json({
-            _id: user.id,
-            name: user.name,
-            email: user.email,
-            onboardingComplete: user.onboardingComplete,
+            ...privateProfile(user),
             token: generateToken(user._id),
             message: 'Google login successful'
         });
@@ -209,6 +234,136 @@ const googleLogin = asyncHandler(async (req, res) => {
         res.status(401);
         throw new Error('Invalid Google credential or token');
     }
+});
+
+// @desc    Get the logged-in user's own full profile
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+    res.status(200).json(privateProfile(user));
+});
+
+// @desc    Update the logged-in user's own profile
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateMyProfile = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+
+    // Only these fields may ever be self-edited. Email/password/role are not editable here.
+    const { name, avatar, title, bio, location, skills } = req.body;
+
+    if (typeof name === 'string') {
+        const trimmed = name.trim();
+        if (!trimmed) {
+            res.status(400);
+            throw new Error('Name cannot be empty');
+        }
+        user.name = trimmed;
+    }
+    if (typeof avatar === 'string') user.avatar = avatar.trim();
+    if (typeof title === 'string') user.title = title.trim();
+    if (typeof bio === 'string') user.bio = bio;
+    if (typeof location === 'string') user.location = location.trim();
+    if (Array.isArray(skills)) {
+        user.skills = skills
+            .map(s => (typeof s === 'string' ? s.trim() : ''))
+            .filter(Boolean)
+            .slice(0, 30);
+    }
+
+    await user.save();
+
+    // Keep denormalised copies inside project teams in sync so the members list
+    // shows the updated name/avatar without needing a re-join.
+    await Project.updateMany(
+        { 'team.email': user.email },
+        {
+            $set: {
+                'team.$[m].name': user.name,
+                'team.$[m].avatar': user.avatar,
+            },
+        },
+        { arrayFilters: [{ 'm.email': user.email }] }
+    );
+
+    res.status(200).json(privateProfile(user));
+});
+
+// @desc    Get another user's public profile by id or email
+// @route   GET /api/auth/users/:identifier
+// @access  Private
+const getUserProfile = asyncHandler(async (req, res) => {
+    const { identifier } = req.params;
+
+    let user = null;
+
+    // 1. Try as a Mongo id
+    if (mongoose.Types.ObjectId.isValid(identifier)) {
+        user = await User.findById(identifier).select('-password');
+    }
+
+    // 2. Try as an email. Emails are stored as typed, so match case-insensitively
+    //    rather than assuming they were lower-cased at signup.
+    if (!user && identifier.includes('@')) {
+        const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        user = await User.findOne({ email: { $regex: `^${escaped}$`, $options: 'i' } }).select('-password');
+    }
+
+    // 3. Fall back to the denormalised copy inside a shared project's team array,
+    //    so members who were invited by email but haven't signed up yet still
+    //    render a basic profile instead of an error.
+    if (!user) {
+        // Only look inside projects the requester is actually part of.
+        const myProjects = await Project.find({
+            $or: [{ user: req.user._id }, { 'team.email': req.user.email }],
+        });
+
+        const member = myProjects
+            .flatMap(p => p.team || [])
+            .find(
+                m =>
+                    String(m.id) === String(identifier) ||
+                    String(m._id) === String(identifier) ||
+                    (m.email && m.email.toLowerCase() === String(identifier).toLowerCase())
+            );
+
+        if (member) {
+            return res.status(200).json({
+                _id: member.id || member._id,
+                id: member.id || member._id,
+                name: member.name,
+                email: member.email,
+                avatar: member.avatar,
+                title: '',
+                bio: '',
+                location: '',
+                skills: [],
+                joinedDate: null,
+                pendingInvite: true,
+            });
+        }
+    }
+
+    if (!user) {
+        res.status(404);
+        throw new Error('User not found');
+    }
+
+    // A user asking about themselves gets the private view.
+    if (user._id.toString() === req.user._id.toString()) {
+        return res.status(200).json(privateProfile(user));
+    }
+
+    res.status(200).json(publicProfile(user));
 });
 
 // Generate JWT
@@ -223,4 +378,7 @@ module.exports = {
     loginUser,
     sendOTP,
     googleLogin,
+    getMe,
+    updateMyProfile,
+    getUserProfile,
 };

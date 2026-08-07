@@ -1,9 +1,12 @@
 import React from 'react';
 import { FiMail, FiShield, FiUser, FiMoreVertical, FiTrash2, FiCopy, FiCheck } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { useDashboard } from '../context/DashboardContext';
 
 const MembersView = () => {
     const { projects, tasks, activeProjectId, theme, updateProject, updateTask, userProfile, currentUserRole } = useDashboard();
+    const navigate = useNavigate();
+    const isAdmin = currentUserRole === 'Admin';
     const [memberInput, setMemberInput] = React.useState('');
     const [activeMenuId, setActiveMenuId] = React.useState(null);
     const [assignmentOpenId, setAssignmentOpenId] = React.useState(null);
@@ -70,26 +73,42 @@ const MembersView = () => {
 
     const projectTasks = tasks.filter(t => t.projectId === activeProjectId);
 
-    // Combine team with the current user ("Me")
+    // Combine team with the current user ("Me"). The current user is always shown first.
     const displayTeam = React.useMemo(() => {
         if (!activeProject) return [];
         const baseTeam = activeProject.team || [];
+        const creatorId = activeProject.user;
 
         // Filter out any baseTeam members that share email/id with "Me"
-        const filteredTeam = baseTeam.filter(m => m.id !== 'me' && m.id !== userProfile?.id && m.email !== userProfile?.email);
+        const filteredTeam = baseTeam
+            .filter(m => m.id !== 'me' && m.id !== userProfile?.id && m.email !== userProfile?.email)
+            .map(m => ({
+                ...m,
+                // Only the person who created the project is an Admin.
+                role: (creatorId && m.id === creatorId) || m.role === 'Admin' ? 'Admin' : 'Collaborator',
+                isCreator: !!creatorId && m.id === creatorId,
+            }));
 
-        const isOwner = activeProject.user === userProfile?.id || activeProject.user === 'demo_user_123';
-        const userRole = isOwner ? 'Owner' : (baseTeam.find(m => m.email === userProfile?.email)?.role || 'Member');
+        const iAmCreator = creatorId === userProfile?.id;
 
         return [
             {
                 ...userProfile,
-                role: userRole,
-                isOwner: isOwner
+                role: iAmCreator ? 'Admin' : 'Collaborator',
+                isCreator: iAmCreator,
+                isMe: true,
             },
             ...filteredTeam
         ];
     }, [activeProject, userProfile]);
+
+    const openProfile = (member) => {
+        if (member.isMe) return navigate('/profile');
+        // Email is the most reliable key: `id` may be a legacy placeholder
+        // (a timestamp, 'me', or a team-subdocument id) rather than a real user id.
+        const identifier = member.email || member.id || member._id;
+        if (identifier) navigate(`/profile/${encodeURIComponent(identifier)}`);
+    };
 
     if (!activeProject) return null;
 
@@ -107,8 +126,8 @@ const MembersView = () => {
             id: Date.now(),
             name: memberInput.split('@')[0],
             email: memberInput,
-            role: 'Contributor',
-            avatar: `https://i.pravatar.cc/150?u=${memberInput}`,
+            role: 'Collaborator',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(memberInput.split('@')[0])}&background=random`,
             assignedProjects: [activeProject.name]
         };
         const updatedTeam = [...team, newMember];
@@ -121,11 +140,6 @@ const MembersView = () => {
         updateProject(activeProject._id, { team: updatedTeam });
     };
 
-    const changeRole = (id, newRole) => {
-        const updatedTeam = team.map(m => (m._id === id || m.id === id) ? { ...m, role: newRole } : m);
-        updateProject(activeProject._id, { team: updatedTeam });
-    };
-
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between mb-2">
@@ -133,7 +147,7 @@ const MembersView = () => {
                     <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Team Members</h2>
                     <p className="text-xs text-slate-500 mt-1">Manage collaborators for <span className="text-neon-cyan font-bold">{activeProject.name}</span></p>
                 </div>
-                {['Owner', 'Admin'].includes(currentUserRole) && (
+                {currentUserRole === 'Admin' && (
                     <div className="flex items-center gap-4">
                         <div className="relative group">
                             <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors" />
@@ -163,14 +177,14 @@ const MembersView = () => {
                                 {copied ? <><FiCheck /> Copied</> : <><FiCopy /> Copy Link</>}
                             </button>
                             <div className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                                {team.length} Members Total
+                                {displayTeam.length} Members Total
                             </div>
                         </div>
                     </div>
                 )}
-                {!['Owner', 'Admin'].includes(currentUserRole) && (
+                {currentUserRole !== 'Admin' && (
                     <div className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                        {team.length} Members Total
+                        {displayTeam.length} Members Total
                     </div>
                 )}
             </div>
@@ -189,27 +203,39 @@ const MembersView = () => {
                         >
                             <div className="flex items-start justify-between mb-5">
                                 <div className="flex items-center gap-4">
-                                    <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => openProfile(member)}
+                                        className="relative shrink-0"
+                                        title={member.isMe ? 'View your profile' : `View ${member.name}'s profile`}
+                                    >
                                         <img
                                             src={member.avatar}
                                             alt={member.name}
                                             className="w-14 h-14 rounded-2xl object-cover ring-2 ring-neon-cyan/20 group-hover:ring-neon-cyan/50 transition-all"
                                         />
                                         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-slate-900 rounded-full"></div>
-                                    </div>
-                                    <div>
-                                        <h3 className={`font-bold text-base ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{member.name}</h3>
-                                        <select
-                                            disabled={member.isOwner || (currentUserRole !== 'Owner' && currentUserRole !== 'Admin')}
-                                            className={`text-[10px] font-bold uppercase tracking-widest bg-transparent text-neon-cyan border-none focus:outline-none cursor-pointer hover:underline disabled:no-underline disabled:cursor-default`}
-                                            value={member.role}
-                                            onChange={(e) => changeRole(member.id, e.target.value)}
+                                    </button>
+                                    <div className="min-w-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => openProfile(member)}
+                                            className={`font-bold text-base text-left truncate hover:text-neon-cyan transition-colors ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}
                                         >
-                                            <option value="Owner" disabled={!member.isOwner}>Owner</option>
-                                            <option value="Admin">Admin</option>
-                                            <option value="Contributor">Contributor</option>
-                                            <option value="Viewer">Viewer</option>
-                                        </select>
+                                            {member.name}
+                                            {member.isMe && <span className="text-slate-500 font-medium"> (You)</span>}
+                                        </button>
+                                        <div className="mt-1">
+                                            <span
+                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${member.role === 'Admin'
+                                                    ? 'bg-electric-purple/10 border-electric-purple/40 text-electric-purple'
+                                                    : 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan'
+                                                    }`}
+                                            >
+                                                {member.role === 'Admin' && <FiShield size={9} />}
+                                                {member.role}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="relative">
@@ -224,15 +250,18 @@ const MembersView = () => {
                                         <div className={`absolute right-0 mt-2 w-48 rounded-2xl border shadow-2xl z-50 animate-in fade-in zoom-in duration-200 ${theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'}`}>
                                             <div className="p-2 space-y-1">
                                                 <button
+                                                    onClick={() => { openProfile(member); setActiveMenuId(null); }}
+                                                    className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                                                >
+                                                    {member.isMe ? 'Your Profile' : 'View Profile'}
+                                                </button>
+                                                <button
                                                     onClick={() => { setAssignmentOpenId(memberId); setActiveMenuId(null); }}
                                                     className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/5 hover:text-neon-cyan' : 'text-slate-500 hover:bg-slate-50 hover:text-neon-cyan'}`}
                                                 >
                                                     Modify Tasks
                                                 </button>
-                                                <button className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${theme === 'dark' ? 'text-slate-400 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}>
-                                                    View Activity
-                                                </button>
-                                                {!member.isOwner && (
+                                                {isAdmin && !member.isMe && !member.isCreator && (
                                                     <>
                                                         <div className={`h-px my-1 ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`}></div>
                                                         <button
@@ -319,12 +348,16 @@ const MembersView = () => {
                             </div>
 
                             <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
-                                <button className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-700'} transition-all flex items-center gap-2`}>
-                                    <FiUser size={12} /> {member.isOwner ? 'Your Profile' : 'Profile'}
+                                <button
+                                    onClick={() => openProfile(member)}
+                                    className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-700'} transition-all flex items-center gap-2`}
+                                >
+                                    <FiUser size={12} /> {member.isMe ? 'Your Profile' : 'View Profile'}
                                 </button>
-                                {!member.isOwner && (
+                                {/* Only an Admin can remove people, and the creator can never be removed. */}
+                                {isAdmin && !member.isMe && !member.isCreator && (
                                     <button
-                                        onClick={() => removeMember(member.id)}
+                                        onClick={() => removeMember(memberId)}
                                         className="text-slate-500 hover:text-rose-500 transition-all font-bold text-[10px] uppercase tracking-widest"
                                     >
                                         Remove
