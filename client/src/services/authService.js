@@ -1,10 +1,6 @@
 import axios from 'axios';
-<<<<<<< HEAD
 import { API_BASE } from './apiClient';
 const API_URL = `${API_BASE}/auth`;
-=======
-const API_URL = 'http://localhost:5001/api/auth';
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 
 // Send OTP
 const sendOTP = async (email) => {
@@ -40,7 +36,6 @@ const googleLogin = async (credential, accessToken) => {
     return response.data;
 };
 
-<<<<<<< HEAD
 const authConfig = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
 
 // Get the logged-in user's own full profile
@@ -64,19 +59,14 @@ const getUserProfile = async (identifier, token) => {
     return response.data;
 };
 
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 const authService = {
     register,
     login,
     logout,
     sendOTP,
     googleLogin,
-<<<<<<< HEAD
     getMe,
     updateProfile,
     getUserProfile,
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 };
 export default authService;

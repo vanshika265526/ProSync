@@ -1,15 +1,12 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DashboardProvider } from "./context/DashboardContext";
-<<<<<<< HEAD
 import { ToastProvider } from "./context/ToastContext";
 import { GithubProvider } from "./context/GithubContext";
 import { RealtimeProvider } from "./context/RealtimeContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { ActivityProvider } from "./context/ActivityContext";
 import { CommandPaletteProvider } from "./context/CommandPaletteContext";
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 import LoadingScreen from "./components/LoadingScreen";
 import "./index.css";
 
@@ -23,7 +20,6 @@ const Support = lazy(() => import("./pages/Support"));
 const LandingContact = lazy(() => import("./pages/LandingContact"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 
-<<<<<<< HEAD
 // Global overlays. Lazy so the palette, drawer and feed (and socket.io-client
 // with them) stay out of the landing-page bundle.
 const CommandPalette = lazy(() => import("./components/command/CommandPalette"));
@@ -39,13 +35,10 @@ const ActivityFeed = lazy(() => import("./components/activity/ActivityFeed"));
  *   Github     -> unchanged, now sits inside the realtime layer
  *   CommandPalette -> outermost of the UI layers so any page can open it
  */
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 function App() {
   return (
     <BrowserRouter>
       <DashboardProvider>
-<<<<<<< HEAD
         <ToastProvider>
           <RealtimeProvider>
             <NotificationProvider>
@@ -82,24 +75,6 @@ function App() {
             </NotificationProvider>
           </RealtimeProvider>
         </ToastProvider>
-=======
-        <Suspense fallback={<LoadingScreen />}>
-          <Routes>
-            {/* Auth routes (NO navbar/sidebar) */}
-            <Route path="/login" element={<Auth />} />
-            <Route path="/signup" element={<Auth />} />
-            {/* App routes (WITH navbar/sidebar) */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<Home />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/dashboard/docs" element={<DashboardDocs />} />
-            <Route path="/docs" element={<LandingDocs />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/contact" element={<LandingContact />} />
-          </Routes>
-        </Suspense>
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
       </DashboardProvider>
     </BrowserRouter>
   );

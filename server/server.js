@@ -1,15 +1,9 @@
-<<<<<<< HEAD
 const http = require('http');
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
-<<<<<<< HEAD
 const { corsOptions } = require('./config/cors');
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 const { errorHandler } = require('./middleware/errorMiddleware');
 
 dotenv.config();
@@ -18,22 +12,17 @@ connectDB();
 
 const app = express();
 
-<<<<<<< HEAD
 // Render, Railway and most PaaS hosts sit behind a load balancer. Without
 // this, req.protocol is always 'http' and req.ip is the proxy's address.
 app.set('trust proxy', 1);
 
 app.use(cors(corsOptions));
-=======
-app.use(cors());
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 app.use(express.json());
 
 app.get('/', (req, res) => {
     res.send('API is running...');
 });
 
-<<<<<<< HEAD
 // Health check. Render pings this to decide whether a deploy went live, and
 // it doubles as a cheap keep-alive target on the free tier.
 app.get('/healthz', (req, res) => {
@@ -44,8 +33,6 @@ app.get('/healthz', (req, res) => {
     });
 });
 
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/projects', require('./routes/projectRoutes'));
@@ -53,18 +40,14 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api/support', require('./routes/supportRoutes'));
 app.use('/api/invite', require('./routes/inviteRoutes'));
-<<<<<<< HEAD
 app.use('/api/github', require('./routes/githubRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 
 app.use(errorHandler);
 
 
 const PORT = process.env.PORT || 5001;
-<<<<<<< HEAD
 
 // Express is wrapped in a bare http server so Socket.IO can share the port.
 const server = http.createServer(app);
@@ -99,8 +82,3 @@ process.on('SIGTERM', shutdown('SIGTERM'));
 process.on('SIGINT', shutdown('SIGINT'));
 
 module.exports = { app, server };
-=======
-app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-});
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1

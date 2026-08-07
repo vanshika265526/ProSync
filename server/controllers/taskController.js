@@ -1,7 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
-<<<<<<< HEAD
 const User = require('../models/User');
 const events = require('../services/eventService');
 
@@ -47,8 +46,6 @@ const diffKeys = (before, body) =>
         }
         return a !== b;
     });
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 
 // @desc    Get all tasks for a project
 // @route   GET /api/tasks
@@ -120,7 +117,6 @@ const createTask = asyncHandler(async (req, res) => {
         subtasks,
     });
 
-<<<<<<< HEAD
     // --- Timeline / feed / inbox ---
     await events.recordEvent({
         project,
@@ -166,8 +162,6 @@ const createTask = asyncHandler(async (req, res) => {
         });
     }
 
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
     res.status(201).json(task);
 });
 
@@ -201,17 +195,13 @@ const updateTask = asyncHandler(async (req, res) => {
         throw new Error('Members can only update task status and progress');
     }
 
-<<<<<<< HEAD
     // Snapshot before the write so we can describe what actually changed.
     const before = task.toObject();
 
-=======
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
     const updatedTask = await Task.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
     });
 
-<<<<<<< HEAD
     // Recording is best-effort and must never fail the update itself.
     try {
         await recordTaskChanges({ before, after: updatedTask, body: req.body, project, actor: req.user });
@@ -401,11 +391,6 @@ const recordTaskChanges = async ({ before, after, body, project, actor }) => {
     }
 };
 
-=======
-    res.status(200).json(updatedTask);
-});
-
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 // @desc    Delete a task
 // @route   DELETE /api/tasks/:id
 // @access  Private
@@ -425,7 +410,6 @@ const deleteTask = asyncHandler(async (req, res) => {
         throw new Error('Only project Admins can delete tasks');
     }
 
-<<<<<<< HEAD
     const title = task.title;
     await task.deleteOne();
 
@@ -439,9 +423,6 @@ const deleteTask = asyncHandler(async (req, res) => {
         entityTitle: title,
     });
 
-=======
-    await task.deleteOne();
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
     res.status(200).json({ id: req.params.id });
 });
 

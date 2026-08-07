@@ -1,12 +1,7 @@
 import axios from 'axios';
-<<<<<<< HEAD
 import { API_BASE } from './apiClient';
 
 const API_URL = `${API_BASE}/projects`;
-=======
-
-const API_URL = 'http://localhost:5001/api/projects';
->>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 
 // Get user projects
 const getProjects = async (token) => {
