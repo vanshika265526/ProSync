@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.env
+# Any .env variant — except the committed template.
+.env.*
+!.env.example

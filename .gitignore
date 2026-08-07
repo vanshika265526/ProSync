@@ -1,7 +1,14 @@
 node_modules/
+
+# --- Secrets ---
+# Broad on purpose: any .env variant is ignored EXCEPT .env.example, which is
+# the committed template. A narrow rule is how server/.env got committed in
+# the first place.
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+client/.env
+server/.env
 
 dist/
 build/
