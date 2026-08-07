@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const Project = require('../models/Project');
 const Task = require('../models/Task');
 const User = require('../models/User');
+<<<<<<< HEAD
 const { defaultAvatar } = require('../utils/userProfile');
 const events = require('../services/eventService');
 
@@ -35,13 +36,25 @@ const normalizeTeam = (project) => {
 // @access  Private
 const getProjects = asyncHandler(async (req, res) => {
     // Shared projects: where user is explicitly the creator OR in the team array
+=======
+
+// @desc    Get all projects for user (Owner or Team Member)
+// @route   GET /api/projects
+// @access  Private
+const getProjects = asyncHandler(async (req, res) => {
+    // Shared projects: where user is explicitly the owner OR in the team array
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
     const projects = await Project.find({
         $or: [
             { user: req.user._id },
             { 'team.email': req.user.email }
         ]
     });
+<<<<<<< HEAD
     res.status(200).json(projects.map(normalizeTeam));
+=======
+    res.status(200).json(projects);
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 });
 
 // @desc    Create new project
@@ -55,6 +68,7 @@ const createProject = asyncHandler(async (req, res) => {
         throw new Error('Please add a project name');
     }
 
+<<<<<<< HEAD
     const creatorId = req.user._id.toString();
     const creatorAvatar = req.user.avatar || defaultAvatar(req.user.name);
 
@@ -77,19 +91,37 @@ const createProject = asyncHandler(async (req, res) => {
         role: ADMIN,
         avatar: creatorAvatar,
     });
+=======
+    // Ensure the creator is in the team as Admin if not already there
+    const creatorInTeam = team.find(member => member.email === req.user.email);
+    if (!creatorInTeam) {
+        team.push({
+            id: req.user._id.toString(),
+            name: req.user.name,
+            email: req.user.email,
+            role: 'Admin',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(req.user.name)}&background=random`
+        });
+    }
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 
     const project = await Project.create({
         user: req.user._id,
         name,
         type,
         status,
+<<<<<<< HEAD
         team: sanitizedTeam,
+=======
+        team,
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
     });
 
     // Mark onboarding as complete for the user
     await User.findByIdAndUpdate(req.user._id, { onboardingComplete: true });
 
     console.log(`[Project] Created: ${project.name} (_id: ${project._id})`);
+<<<<<<< HEAD
 
     await events.recordEvent({
         project,
@@ -111,6 +143,9 @@ const createProject = asyncHandler(async (req, res) => {
     });
 
     res.status(201).json(normalizeTeam(project));
+=======
+    res.status(201).json(project);
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 });
 
 // @desc    Join project via ID
@@ -125,6 +160,7 @@ const joinProject = asyncHandler(async (req, res) => {
         throw new Error('Project not found');
     }
 
+<<<<<<< HEAD
     const isCreator = project.user.toString() === req.user._id.toString();
     const avatar = req.user.avatar || defaultAvatar(req.user.name);
 
@@ -143,12 +179,30 @@ const joinProject = asyncHandler(async (req, res) => {
         project.team[existingMemberIndex].role = isCreator ? ADMIN : COLLABORATOR;
     } else {
         // Someone joining through the invite link is always a Collaborator
+=======
+    // Check if user is already in the team (as a placeholder)
+    const existingMemberIndex = project.team.findIndex(member => member.email === req.user.email);
+
+    if (existingMemberIndex !== -1) {
+        // Update placeholder member with real user ID and data
+        project.team[existingMemberIndex].id = req.user._id.toString();
+        project.team[existingMemberIndex].name = req.user.name;
+        project.team[existingMemberIndex].avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(req.user.name)}&background=random`;
+        // Keep their existing role (Admin/Contributor) if it was pre-assigned
+    } else {
+        // Add user to team as Member if not found
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
         project.team.push({
             id: req.user._id.toString(),
             name: req.user.name,
             email: req.user.email,
+<<<<<<< HEAD
             role: isCreator ? ADMIN : COLLABORATOR,
             avatar,
+=======
+            role: 'Member',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(req.user.name)}&background=random`
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
         });
     }
 
@@ -157,6 +211,7 @@ const joinProject = asyncHandler(async (req, res) => {
     // Mark onboarding as complete
     await User.findByIdAndUpdate(req.user._id, { onboardingComplete: true });
 
+<<<<<<< HEAD
     if (!wasAlreadyOnBoard && !isCreator) {
         await events.recordEvent({
             project,
@@ -179,6 +234,9 @@ const joinProject = asyncHandler(async (req, res) => {
     }
 
     res.status(200).json(normalizeTeam(project));
+=======
+    res.status(200).json(project);
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 });
 
 // @desc    Update project
@@ -192,15 +250,22 @@ const updateProject = asyncHandler(async (req, res) => {
         throw new Error('Project not found');
     }
 
+<<<<<<< HEAD
     const isCreator = project.user.toString() === req.user._id.toString();
     const userInTeam = project.team.find(member => member.email === req.user.email);
     const isAdmin = isCreator || userInTeam?.role === ADMIN || userInTeam?.role === 'Owner';
+=======
+    // Check if user is Admin in the team or the owner
+    const userInTeam = project.team.find(member => member.email === req.user.email);
+    const isAdmin = project.user.toString() === req.user._id.toString() || userInTeam?.role === 'Admin';
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 
     if (!isAdmin) {
         res.status(403);
         throw new Error('Only Admins can update project details');
     }
 
+<<<<<<< HEAD
     // Never let the request body reassign ownership or hand out roles.
     const { user, _id, ...updates } = req.body;
 
@@ -313,6 +378,14 @@ const recordProjectChanges = async ({ before, after, updates, teamBefore, actor 
     }
 };
 
+=======
+    const updatedProject = await Project.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+    });
+    res.status(200).json(updatedProject);
+});
+
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 // @desc    Delete project
 // @route   DELETE /api/projects/:id
 // @access  Private
@@ -324,10 +397,17 @@ const deleteProject = asyncHandler(async (req, res) => {
         throw new Error('Project not found');
     }
 
+<<<<<<< HEAD
     // Only the Admin who created it can delete the project
     if (project.user.toString() !== req.user._id.toString()) {
         res.status(403);
         throw new Error('Only the project Admin can delete the project');
+=======
+    // Only the primary owner (the one who created it) can delete the project
+    if (project.user.toString() !== req.user._id.toString()) {
+        res.status(403);
+        throw new Error('Only the project owner can delete the project');
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
     }
 
     // Delete associated tasks

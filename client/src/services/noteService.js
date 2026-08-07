@@ -1,7 +1,12 @@
 import axios from 'axios';
+<<<<<<< HEAD
 import { API_BASE } from './apiClient';
 
 const API_URL = `${API_BASE}/notes`;
+=======
+
+const API_URL = 'http://localhost:5001/api/notes';
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
 
 const getNotes = async (token) => {
     const config = {

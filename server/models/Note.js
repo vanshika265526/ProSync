@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const mongoose = require('mongoose');
 
 const noteSchema = mongoose.Schema(
@@ -33,3 +34,33 @@ const noteSchema = mongoose.Schema(
 );
 
 module.exports = mongoose.model('Note', noteSchema);
+=======
+const mongoose = require('mongoose');
+
+const noteSchema = mongoose.Schema(
+    {
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            ref: 'User',
+        },
+        title: {
+            type: String,
+            required: [true, 'Please add a title'],
+        },
+        content: {
+            type: String,
+            required: [true, 'Please add content'],
+        },
+        date: {
+            type: String,
+            default: () => new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        },
+    },
+    {
+        timestamps: true,
+    }
+);
+
+module.exports = mongoose.model('Note', noteSchema);
+>>>>>>> 79dc160d18ec2038869e85b879f4b077f7e367b1
