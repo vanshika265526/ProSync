@@ -1,5 +1,6 @@
 import axios from 'axios';
-const API_URL = 'http://localhost:5001/api/auth';
+import { API_BASE } from './apiClient';
+const API_URL = `${API_BASE}/auth`;
 
 // Send OTP
 const sendOTP = async (email) => {

@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { API_BASE } from './apiClient';
 
-const API_URL = 'http://localhost:5001/api/tasks';
+const API_URL = `${API_BASE}/tasks`;
 
 // Get user tasks
 const getTasks = async (projectId, token) => {

@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { API_BASE } from './apiClient';
 
-const API_URL = 'http://localhost:5001/api/github';
+const API_URL = `${API_BASE}/github`;
 
 const cfg = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FiX, FiMail, FiCopy, FiCheck, FiSend, FiShare2 } from 'react-icons/fi';
 import { FaWhatsapp, FaTelegramPlane, FaLinkedinIn } from 'react-icons/fa';
 import axios from 'axios';
+import { API_BASE } from '../services/apiClient';
 import useModalDismiss from '../hooks/useModalDismiss';
 
 const InviteModal = ({ isOpen, onClose, activeProjectId, projectName }) => {
@@ -36,7 +37,7 @@ const InviteModal = ({ isOpen, onClose, activeProjectId, projectName }) => {
         setStatus('sending');
         try {
             const token = JSON.parse(localStorage.getItem('user'))?.token;
-            await axios.post('http://localhost:5001/api/invite/send',
+            await axios.post(`${API_BASE}/invite/send`,
                 { email },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
